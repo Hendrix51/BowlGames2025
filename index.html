@@ -15,7 +15,8 @@
     background-size: cover;        /* Fill screen */
     background-position: center;   /* Center image */
     background-repeat: no-repeat;  /* No tiling */
-    background-attachment: fixed;  /* Parallax-style scroll */
+    background-attachment: scroll; 
+    min-height: 100svh; /* Parallax-style scroll */
   }
     body::before {
     content: "";
@@ -24,6 +25,18 @@
     background: rgba(246, 247, 251, 0.85);
     z-index: -1;
   }
+
+    @media (min-width: 769px) {
+    body {
+      background-attachment: fixed;
+    }
+  }
+
+  @media (max-width: 768px) {
+  body {
+    background-position: center top; /* usually looks better on tall screens */
+  }
+}
 
     .wrap { max-width: 900px; margin: 0 auto; padding: 24px; }
     .card { background: white; border-radius: 16px; padding: 18px; box-shadow: 0 6px 20px rgba(0,0,0,.06); margin-bottom: 14px; }

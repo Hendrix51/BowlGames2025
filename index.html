@@ -1,0 +1,194 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bowl Pick'em</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; margin: 0; background:#f6f7fb; color:#111; }
+    .wrap { max-width: 900px; margin: 0 auto; padding: 24px; }
+    .card { background: white; border-radius: 16px; padding: 18px; box-shadow: 0 6px 20px rgba(0,0,0,.06); margin-bottom: 14px; }
+    h1 { margin: 0 0 10px; font-size: 24px; }
+    .sub { margin: 0 0 18px; opacity:.75; }
+    .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    input[type="text"] { width: 320px; max-width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 14px; }
+    button { padding: 10px 14px; border: 0; border-radius: 10px; font-weight: 700; cursor: pointer; }
+    button.primary { background:#111; color:#fff; }
+    button.primary:disabled { opacity:.5; cursor:not-allowed; }
+    .game { display:grid; grid-template-columns: 1fr; gap: 10px; }
+    .meta { font-size: 13px; opacity:.75; }
+    .teams { font-size: 16px; font-weight: 700; }
+    .pickRow { display:flex; gap: 16px; flex-wrap: wrap; }
+    label { display:flex; align-items:center; gap: 8px; }
+    .ok { color: #0a7a2f; font-weight:700; }
+    .err { color: #b00020; font-weight:700; }
+    .small { font-size: 12px; opacity:.7; }
+    .sticky { position: sticky; top: 0; background: #f6f7fb; padding-top: 10px; z-index: 5; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="sticky">
+      <div class="card">
+        <h1>College Football Bowl Pick’em</h1>
+        <p class="sub">Pick winners for each game, then submit.</p>
+        <div class="row">
+          <input id="name" type="text" placeholder="Your name (required)" />
+          <button id="submitBtn" class="primary" disabled>Submit Picks</button>
+          <span id="status" class="small"></span>
+        </div>
+      </div>
+    </div>
+
+    <div id="games"></div>
+  </div>
+
+  <script>
+    // IMPORTANT: paste your Apps Script web app URL here (ends in /exec)
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzDZv4jHUdu7t7crWX4-3GToFzvHKofDSfNANUrVyGCs0Igb3HPYWw8liHOEoIZGHKmnA/exec";
+
+    // Add your bowl games here
+    const GAMES = [
+        { id: "cricket-celebration-2025-12-13", date: "Dec 13, 2025", bowl: "Cricket Celebration Bowl", team1: "SC State", team2: "Prairie View A&M" },
+        { id: "la-bowl-2025-12-13", date: "Dec 13, 2025", bowl: "Bucked Up LA Bowl hosted by Gronk", team1: "Boise State", team2: "Washington" },
+
+        { id: "salute-to-veterans-2025-12-16", date: "Dec 16, 2025", bowl: "IS4S Salute to Veterans Bowl", team1: "Troy", team2: "Jacksonville State" },
+
+        { id: "cure-bowl-2025-12-17", date: "Dec 17, 2025", bowl: "StaffDNA Cure Bowl", team1: "Old Dominion", team2: "USF" },
+        { id: "68-ventures-bowl-2025-12-17", date: "Dec 17, 2025", bowl: "68 Ventures Bowl", team1: "Louisiana", team2: "Delaware" },
+
+        { id: "xbox-bowl-2025-12-18", date: "Dec 18, 2025", bowl: "Xbox Bowl", team1: "Missouri State", team2: "Arkansas State" },
+
+        { id: "myrtle-beach-bowl-2025-12-19", date: "Dec 19, 2025", bowl: "Myrtle Beach Bowl", team1: "Kennesaw State", team2: "Western Michigan" },
+        { id: "gasparilla-bowl-2025-12-19", date: "Dec 19, 2025", bowl: "Union Home Mortgage Gasparilla Bowl", team1: "Memphis", team2: "NC State" },
+        { id: "cfp-first-round-1-2025-12-19", date: "Dec 19, 2025", bowl: "CFP First Round", team1: "Alabama", team2: "Oklahoma" },
+
+        { id: "cfp-first-round-2-2025-12-20", date: "Dec 20, 2025", bowl: "CFP First Round", team1: "Miami (FL)", team2: "Texas A&M" },
+        { id: "cfp-first-round-3-2025-12-20", date: "Dec 20, 2025", bowl: "CFP First Round", team1: "Tulane", team2: "Ole Miss" },
+        { id: "cfp-first-round-4-2025-12-20", date: "Dec 20, 2025", bowl: "CFP First Round", team1: "James Madison", team2: "Oregon" },
+
+        { id: "potato-bowl-2025-12-22", date: "Dec 22, 2025", bowl: "Famous Idaho Potato Bowl", team1: "Washington State", team2: "Utah State" },
+
+        { id: "boca-raton-bowl-2025-12-23", date: "Dec 23, 2025", bowl: "Bush's Boca Raton Bowl of Beans", team1: "Toledo", team2: "Louisville" },
+        { id: "new-orleans-bowl-2025-12-23", date: "Dec 23, 2025", bowl: "New Orleans Bowl", team1: "WKU", team2: "Southern Miss" },
+        { id: "frisco-bowl-2025-12-23", date: "Dec 23, 2025", bowl: "Scooter's Coffee Frisco Bowl", team1: "UNLV", team2: "Ohio" },
+
+        { id: "hawaii-bowl-2025-12-24", date: "Dec 24, 2025", bowl: "Sheraton Hawai'i Bowl", team1: "California", team2: "Hawai'i" },
+
+        { id: "gameabove-sports-bowl-2025-12-26", date: "Dec 26, 2025", bowl: "GameAbove Sports Bowl", team1: "Central Michigan", team2: "Northwestern" },
+        { id: "rate-bowl-2025-12-26", date: "Dec 26, 2025", bowl: "Rate Bowl", team1: "New Mexico", team2: "Minnesota" },
+        { id: "first-responder-bowl-2025-12-26", date: "Dec 26, 2025", bowl: "SERVPRO First Responder Bowl", team1: "FIU", team2: "UTSA" },
+
+        { id: "military-bowl-2025-12-27", date: "Dec 27, 2025", bowl: "Go Bowling Military Bowl", team1: "Pitt", team2: "East Carolina" },
+        { id: "pinstripe-bowl-2025-12-27", date: "Dec 27, 2025", bowl: "Bad Boy Mowers Pinstripe Bowl", team1: "Penn State", team2: "Clemson" },
+        { id: "fenway-bowl-2025-12-27", date: "Dec 27, 2025", bowl: "Wasabi Fenway Bowl", team1: "UConn", team2: "Army" },
+        { id: "poptarts-bowl-2025-12-27", date: "Dec 27, 2025", bowl: "Pop-Tarts Bowl", team1: "Georgia Tech", team2: "BYU" },
+        { id: "arizona-bowl-2025-12-27", date: "Dec 27, 2025", bowl: "Snoop Dogg Arizona Bowl", team1: "Miami (OH)", team2: "Fresno State" },
+        { id: "new-mexico-bowl-2025-12-27", date: "Dec 27, 2025", bowl: "Isleta New Mexico Bowl", team1: "North Texas", team2: "San Diego State" },
+        { id: "gator-bowl-2025-12-27", date: "Dec 27, 2025", bowl: "TaxSlayer Gator Bowl", team1: "Virginia", team2: "Missouri" },
+        { id: "texas-bowl-2025-12-27", date: "Dec 27, 2025", bowl: "Kinder's Texas Bowl", team1: "LSU", team2: "Houston" },
+
+        { id: "birmingham-bowl-2025-12-29", date: "Dec 29, 2025", bowl: "JLab Birmingham Bowl", team1: "Georgia Southern", team2: "App State" },
+
+        { id: "independence-bowl-2025-12-30", date: "Dec 30, 2025", bowl: "Radiance Tech Independence Bowl", team1: "Coastal Carolina", team2: "Louisiana Tech" },
+        { id: "music-city-bowl-2025-12-30", date: "Dec 30, 2025", bowl: "Liberty Mutual Music City Bowl", team1: "Tennessee", team2: "Illinois" },
+        { id: "alamo-bowl-2025-12-30", date: "Dec 30, 2025", bowl: "Valero Alamo Bowl", team1: "USC", team2: "TCU" },
+
+        { id: "reliaquest-bowl-2025-12-31", date: "Dec 31, 2025", bowl: "ReliaQuest Bowl", team1: "Iowa", team2: "Vanderbilt" },
+        { id: "sun-bowl-2025-12-31", date: "Dec 31, 2025", bowl: "Tony the Tiger Sun Bowl", team1: "Arizona State", team2: "Duke" },
+        { id: "citrus-bowl-2025-12-31", date: "Dec 31, 2025", bowl: "Cheez-It Citrus Bowl", team1: "Michigan", team2: "Texas" },
+        { id: "las-vegas-bowl-2025-12-31", date: "Dec 31, 2025", bowl: "SRS Distribution Las Vegas Bowl", team1: "Nebraska", team2: "Utah" },
+        // { id: "cotton-bowl-2025-12-31", date: "Dec 31, 2025", bowl: "Goodyear Cotton Bowl", team1: "Miami/Texas A&M", team2: "Ohio State" },
+
+        // { id: "orange-bowl-2026-01-01", date: "Jan 1, 2026", bowl: "Capital One Orange Bowl", team1: "JMU/Oregon", team2: "Texas Tech" },
+        // { id: "rose-bowl-2026-01-01", date: "Jan 1, 2026", bowl: "Rose Bowl Game", team1: "Alabama/Oklahoma", team2: "Indiana" },
+        // { id: "sugar-bowl-2026-01-01", date: "Jan 1, 2026", bowl: "Allstate Sugar Bowl", team1: "Tulane/Ole Miss", team2: "Georgia" },
+
+        { id: "armed-forces-bowl-2026-01-02", date: "Jan 2, 2026", bowl: "Lockheed Martin Armed Forces Bowl", team1: "Rice", team2: "Texas State" },
+        { id: "liberty-bowl-2026-01-02", date: "Jan 2, 2026", bowl: "AutoZone Liberty Bowl", team1: "Navy", team2: "Cincinnati" },
+        { id: "dukes-mayo-bowl-2026-01-02", date: "Jan 2, 2026", bowl: "Duke's Mayo Bowl", team1: "Wake Forest", team2: "Mississippi State" },
+        { id: "holiday-bowl-2026-01-02", date: "Jan 2, 2026", bowl: "Trust & Will Holiday Bowl", team1: "Arizona", team2: "SMU" },
+
+        // { id: "fiesta-bowl-semifinal-2026-01-08", date: "Jan 8, 2026", bowl: "Vrbo Fiesta Bowl (CFP Semifinal)", team1: "TBD", team2: "TBD" },
+        // { id: "peach-bowl-semifinal-2026-01-09", date: "Jan 9, 2026", bowl: "Chick-fil-A Peach Bowl (CFP Semifinal)", team1: "TBD", team2: "TBD" },
+
+        // { id: "cfp-national-championship-2026-01-19", date: "Jan 19, 2026", bowl: "CFP National Championship", team1: "Semifinal Winner", team2: "Semifinal Winner" }
+    ];
+
+
+    const elGames = document.getElementById("games");
+    const elName = document.getElementById("name");
+    const elBtn = document.getElementById("submitBtn");
+    const elStatus = document.getElementById("status");
+
+    const picks = {}; // gameId -> pickedTeam
+
+    function render() {
+      elGames.innerHTML = "";
+      for (const g of GAMES) {
+        const card = document.createElement("div");
+        card.className = "card game";
+        card.innerHTML = `
+          <div class="meta">${g.date} • ${g.bowl}</div>
+          <div class="teams">${g.team1} vs ${g.team2}</div>
+          <div class="pickRow">
+            <label><input type="radio" name="pick-${g.id}" value="${g.team1}"> ${g.team1}</label>
+            <label><input type="radio" name="pick-${g.id}" value="${g.team2}"> ${g.team2}</label>
+          </div>
+        `;
+        elGames.appendChild(card);
+
+        card.querySelectorAll(`input[name="pick-${g.id}"]`).forEach(inp => {
+          inp.addEventListener("change", (e) => {
+            picks[g.id] = e.target.value;
+            validate();
+          });
+        });
+      }
+      validate();
+    }
+
+    function validate() {
+      const nameOk = elName.value.trim().length > 0;
+      const allPicked = GAMES.every(g => !!picks[g.id]);
+      const urlOk = SCRIPT_URL && SCRIPT_URL.startsWith("https://script.google.com/") && SCRIPT_URL.endsWith("/exec");
+      elBtn.disabled = !(nameOk && allPicked && urlOk);
+      elStatus.textContent = !urlOk ? "Fix SCRIPT_URL (must end with /exec)." :
+                           !nameOk ? "Enter your name." :
+                           !allPicked ? "Pick every game." : "";
+      elStatus.className = "small";
+    }
+
+    elName.addEventListener("input", validate);
+
+    elBtn.addEventListener("click", async () => {
+      elBtn.disabled = true;
+      elStatus.textContent = "Submitting…";
+      elStatus.className = "small";
+
+      const payload = { name: elName.value.trim(), picks };
+
+      try {
+        const res = await fetch(SCRIPT_URL, {
+          method: "POST",
+          // Apps Script is happier with text/plain than application/json in some setups
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!data.ok) throw new Error(data.error || "Submission failed");
+
+        elStatus.textContent = "Submitted! ✅";
+        elStatus.className = "ok";
+      } catch (err) {
+        elStatus.textContent = "Error: " + err.message;
+        elStatus.className = "err";
+        validate();
+      }
+    });
+
+    render();
+  </script>
+</body>
+</html>

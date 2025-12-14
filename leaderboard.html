@@ -100,6 +100,26 @@
       font-weight: 900;
       min-width: 260px;
       max-width: 360px;
+
+      /* ✅ allow matchup column to wrap even though other cells are nowrap */
+      white-space: normal !important;
+      line-height: 1.15;
+      overflow-wrap: anywhere;
+    }
+
+    /* ✅ On mobile, make matchup column narrower */
+    @media (max-width: 768px) {
+      .picksGrid .matchupCol {
+        min-width: 140px;
+        max-width: 180px;
+      }
+    }
+
+    /* Optional: on very small phones, unsticks the matchup column for easier horizontal scroll */
+    @media (max-width: 480px) {
+      .picksGrid .matchupCol {
+        position: static;
+      }
     }
 
     .cell {

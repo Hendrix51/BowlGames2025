@@ -51,7 +51,6 @@
       margin: 8px 0 16px;
       flex-wrap: wrap;
 
-      /* ✅ Sticky tab bar */
       position: sticky;
       top: 0;
       z-index: 10;
@@ -76,14 +75,13 @@
     th { font-size:12px; opacity:.7; text-transform:uppercase; letter-spacing:.04em; }
     .wins { text-align:right; }
 
-    /* Picks grid (Games as rows, Names as columns) */
+    /* Picks grid */
     .gridWrap {
       overflow: auto;
       border-radius: 14px;
       border: 1px solid rgba(0,0,0,0.06);
     }
 
-    /* ✅ Mobile swipe hint */
     .swipeHint {
       display: none;
       margin: 0 0 10px;
@@ -120,7 +118,6 @@
       font-weight: 900;
     }
 
-    /* Sticky first column = matchup */
     .picksGrid .matchupCol {
       position: sticky;
       left: 0;
@@ -130,13 +127,11 @@
       min-width: 260px;
       max-width: 360px;
 
-      /* allow matchup column to wrap */
       white-space: normal !important;
       line-height: 1.15;
       overflow-wrap: anywhere;
     }
 
-    /* On mobile, make matchup column narrower */
     @media (max-width: 768px) {
       .picksGrid .matchupCol {
         min-width: 140px;
@@ -144,7 +139,6 @@
       }
     }
 
-    /* Optional: on very small phones, unsticks the matchup column */
     @media (max-width: 480px) {
       .picksGrid .matchupCol { position: static; }
     }
@@ -168,7 +162,6 @@
   <div class="wrap">
     <div class="card">
       <h1>College Football Bowl Pick’em 2025</h1>
-      <p class="muted">Leaderboard + everyone’s picks (green = correct, red = wrong, gray = pending)</p>
 
       <div class="tabs">
         <button id="tabLeaderboard" class="tabbtn active">Leaderboard</button>
@@ -189,8 +182,6 @@
       <!-- Picks grid view -->
       <div id="viewPicks" style="display:none;">
         <div id="picksStatus" class="muted">Click “Picks Grid” to load…</div>
-
-        <!-- ✅ Swipe hint (mobile only) -->
         <div class="swipeHint">Swipe left/right to see everyone’s picks →</div>
 
         <div class="gridWrap">
@@ -207,9 +198,11 @@
   <script>
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzDZv4jHUdu7t7crWX4-3GToFzvHKofDSfNANUrVyGCs0Igb3HPYWw8liHOEoIZGHKmnA/exec";
 
-    // ✅ Paste your exact GAMES array from index.html here (same ids/teams)
+    // ✅ Auto-unlock Picks Grid at Tue Dec 16 2025, 9:00 PM ET
+    const UNLOCK_AT_ET = new Date("2025-12-16T21:00:00-05:00").getTime();
+    const PICKS_GRID_UNLOCKED = () => Date.now() >= UNLOCK_AT_ET;
+
     const GAMES = [
- 
       { id: "salute-to-veterans-2025-12-16", team1: "Troy", team2: "Jacksonville State" },
       { id: "cure-bowl-2025-12-17", team1: "Old Dominion", team2: "USF" },
       { id: "68-ventures-bowl-2025-12-17", team1: "Louisiana", team2: "Delaware" },
@@ -251,10 +244,8 @@
     ];
 
     const GAME_MAP = Object.fromEntries(GAMES.map(g => [g.id, `${g.team1} vs ${g.team2}`]));
+    let picksLoaded = false;
 
-    let picksLoaded = false; // ✅ lazy-load flag
-
-    // Tabs
     function setActiveTab(which) {
       const tL = document.getElementById("tabLeaderboard");
       const tP = document.getElementById("tabPicks");
@@ -267,7 +258,6 @@
       vL.style.display = isL ? "" : "none";
       vP.style.display = isL ? "none" : "";
 
-      // ✅ Lazy-load picks when tab is opened
       if (!isL && !picksLoaded) {
         picksLoaded = true;
         document.getElementById("picksStatus").textContent = "Loading picks…";
@@ -276,7 +266,15 @@
     }
 
     document.getElementById("tabLeaderboard").addEventListener("click", () => setActiveTab("leaderboard"));
-    document.getElementById("tabPicks").addEventListener("click", () => setActiveTab("picks"));
+
+    // ✅ Visible but not reachable until unlock time
+    document.getElementById("tabPicks").addEventListener("click", () => {
+      if (!PICKS_GRID_UNLOCKED()) {
+        alert("Picks grid will unlock when the first games start on Dec 16 at 9:00 PM ET.");
+        return;
+      }
+      setActiveTab("picks");
+    });
 
     function escapeHtml(s) {
       return String(s ?? "").replace(/[&<>"']/g, c => ({
@@ -332,7 +330,6 @@
         return;
       }
 
-      // Header: Matchup + user columns
       const head = document.getElementById("picksHead");
       head.innerHTML = `
         <tr>
@@ -341,7 +338,6 @@
         </tr>
       `;
 
-      // Body: each game as a row, each user as a column
       const body = document.getElementById("picksBody");
       body.innerHTML = gameIds.map(gid => {
         const matchup = GAME_MAP[gid] || gid;
@@ -380,7 +376,7 @@
     }
 
     // Boot
-    loadLeaderboard(); // ✅ picks loads when tab is opened
+    loadLeaderboard(); // picks loads only after unlock + click
   </script>
 </body>
 </html>

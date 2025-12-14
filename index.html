@@ -6,9 +6,7 @@
   <title>Bowl Pick'em</title>
  <style>
   /* --- Full-page background that works on mobile + desktop --- */
-  html {
-    height: 100%;
-  }
+  html { height: 100%; }
 
   html::before {
     content: "";
@@ -35,34 +33,60 @@
     margin: 0;
     color: #111;
     min-height: 100svh;
-    background: transparent; /* important so the html::before shows through */
+    background: transparent;
   }
 
   /* Mobile tuning */
   @media (max-width: 768px) {
-    html::before {
-      background-position: center top;
-    }
+    html::before { background-position: center top; }
   }
 
-    .wrap { max-width: 900px; margin: 0 auto; padding: 24px; }
-    .card { background: white; border-radius: 16px; padding: 18px; box-shadow: 0 6px 20px rgba(0,0,0,.06); margin-bottom: 14px; }
-    h1 { margin: 0 0 10px; font-size: 24px; }
-    .sub { margin: 0 0 18px; opacity:.75; }
-    .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-    input[type="text"] { width: 320px; max-width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 14px; }
-    button { padding: 10px 14px; border: 0; border-radius: 10px; font-weight: 700; cursor: pointer; }
-    button.primary { background:#111; color:#fff; }
-    button.primary:disabled { opacity:.5; cursor:not-allowed; }
-    .game { display:grid; grid-template-columns: 1fr; gap: 10px; }
-    .meta { font-size: 13px; opacity:.75; }
-    .teams { font-size: 16px; font-weight: 700; }
-    .pickRow { display:flex; gap: 16px; flex-wrap: wrap; }
-    label { display:flex; align-items:center; gap: 8px; }
-    .ok { color: #0a7a2f; font-weight:700; }
-    .err { color: #b00020; font-weight:700; }
-    .small { font-size: 12px; opacity:.7; }
-    .sticky { position: sticky; top: 0; background: #f6f7fb; padding-top: 10px; z-index: 5; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 24px; }
+  .card { background: white; border-radius: 16px; padding: 18px; box-shadow: 0 6px 20px rgba(0,0,0,.06); margin-bottom: 14px; }
+  h1 { margin: 0 0 10px; font-size: 24px; }
+  .sub { margin: 0 0 18px; opacity:.75; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+
+  input[type="text"] { width: 320px; max-width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 14px; }
+
+  button { padding: 10px 14px; border: 0; border-radius: 10px; font-weight: 700; cursor: pointer; }
+  button.primary { background:#111; color:#fff; }
+  button.primary:disabled { opacity:.5; cursor:not-allowed; }
+
+  /* ✅ Leaderboard link styled as a button */
+  a.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-weight: 800;
+    text-decoration: none;
+    border: 1px solid rgba(0,0,0,0.12);
+    background: rgba(255,255,255,0.9);
+    color: #111;
+  }
+  a.btn:hover { filter: brightness(0.98); }
+  a.btn:active { transform: translateY(1px); }
+
+  .game { display:grid; grid-template-columns: 1fr; gap: 10px; }
+  .meta { font-size: 13px; opacity:.75; }
+  .teams { font-size: 16px; font-weight: 700; }
+  .pickRow { display:flex; gap: 16px; flex-wrap: wrap; }
+  label { display:flex; align-items:center; gap: 8px; }
+  .ok { color: #0a7a2f; font-weight:700; }
+  .err { color: #b00020; font-weight:700; }
+  .small { font-size: 12px; opacity:.7; }
+
+  /* ✅ Sticky header that doesn’t block your background photo */
+  .sticky {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    padding-top: 10px;
+    background: transparent;
+    backdrop-filter: blur(6px);
+  }
   </style>
 </head>
 <body>
@@ -72,9 +96,12 @@
         <h1>College Football Bowl Pick’em 2025</h1>
         <p class="sub">Pick spreads for each game, then submit.</p>
         <p class="sub">New and improved format this year, thanks ChatGPT.</p>
+
+        <!-- ✅ Button-style leaderboard link -->
         <p class="sub">
-          <a href="leaderboard.html">View leaderboard</a>
+          <a class="btn" href="leaderboard.html">View Leaderboard</a>
         </p>
+
         <div class="row">
           <input id="name" type="text" placeholder="Your name (required)" />
           <button id="submitBtn" class="primary" disabled>Submit Picks</button>
@@ -92,8 +119,6 @@
 
     // Add your bowl games here
     const GAMES = [
-  
-
         { id: "salute-to-veterans-2025-12-16", date: "Dec 16, 2025", bowl: "IS4S Salute to Veterans Bowl",
           team1: "Troy", team2: "Jacksonville State", spread1: "-2.5", spread2: "+2.5" },
 
@@ -207,20 +232,7 @@
 
         { id: "holiday-bowl-2026-01-02", date: "Jan 2, 2026", bowl: "Trust & Will Holiday Bowl",
           team1: "Arizona", team2: "SMU", spread1: "-3", spread2: "+3" },
-
- 
-
-        // { id: "cotton-bowl-2025-12-31", date: "Dec 31, 2025", bowl: "Goodyear Cotton Bowl", team1: "Miami/Texas A&M", team2: "Ohio State" },
-
-        // { id: "orange-bowl-2026-01-01", date: "Jan 1, 2026", bowl: "Capital One Orange Bowl", team1: "JMU/Oregon", team2: "Texas Tech" },
-        // { id: "rose-bowl-2026-01-01", date: "Jan 1, 2026", bowl: "Rose Bowl Game", team1: "Alabama/Oklahoma", team2: "Indiana" },
-        // { id: "sugar-bowl-2026-01-01", date: "Jan 1, 2026", bowl: "Allstate Sugar Bowl", team1: "Tulane/Ole Miss", team2: "Georgia" },
-        // { id: "fiesta-bowl-semifinal-2026-01-08", date: "Jan 8, 2026", bowl: "Vrbo Fiesta Bowl (CFP Semifinal)", team1: "TBD", team2: "TBD" },
-        // { id: "peach-bowl-semifinal-2026-01-09", date: "Jan 9, 2026", bowl: "Chick-fil-A Peach Bowl (CFP Semifinal)", team1: "TBD", team2: "TBD" },
-
-        // { id: "cfp-national-championship-2026-01-19", date: "Jan 19, 2026", bowl: "CFP National Championship", team1: "Semifinal Winner", team2: "Semifinal Winner" }
     ];
-
 
     const elGames = document.getElementById("games");
     const elName = document.getElementById("name");
@@ -235,8 +247,8 @@
         const card = document.createElement("div");
         card.className = "card game";
 
-      const t1Label = `${g.team1} ${g.spread1 || ""}`.trim();
-      const t2Label = `${g.team2} ${g.spread2 || ""}`.trim();
+        const t1Label = `${g.team1} ${g.spread1 || ""}`.trim();
+        const t2Label = `${g.team2} ${g.spread2 || ""}`.trim();
 
         card.innerHTML = `
           <div class="meta">${g.date} • ${g.bowl}</div>
@@ -248,7 +260,7 @@
         `;
         elGames.appendChild(card);
 
-        card.querySelectorAll(`input[name="pick-${g.id}"]`).forEach(inp => {
+        card.querySelectorAll(\`input[name="pick-\${g.id}"]\`).forEach(inp => {
           inp.addEventListener("change", (e) => {
             picks[g.id] = e.target.value;
             validate();
@@ -281,7 +293,6 @@
       try {
         const res = await fetch(SCRIPT_URL, {
           method: "POST",
-          // Apps Script is happier with text/plain than application/json in some setups
           headers: { "Content-Type": "text/plain;charset=utf-8" },
           body: JSON.stringify(payload)
         });

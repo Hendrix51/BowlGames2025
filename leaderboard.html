@@ -45,7 +45,21 @@
     .muted { opacity:.7; font-size: 12px; margin: 0 0 14px; }
 
     /* Tabs */
-    .tabs { display:flex; gap:10px; margin: 8px 0 16px; flex-wrap: wrap; }
+    .tabs {
+      display:flex;
+      gap:10px;
+      margin: 8px 0 16px;
+      flex-wrap: wrap;
+
+      /* ✅ Sticky tab bar */
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      padding: 10px 0;
+      background: rgba(246,247,251,0.65);
+      backdrop-filter: blur(6px);
+    }
+
     .tabbtn{
       padding: 10px 12px;
       border-radius: 10px;
@@ -67,6 +81,21 @@
       overflow: auto;
       border-radius: 14px;
       border: 1px solid rgba(0,0,0,0.06);
+    }
+
+    /* ✅ Mobile swipe hint */
+    .swipeHint {
+      display: none;
+      margin: 0 0 10px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.85);
+      border: 1px solid rgba(0,0,0,0.06);
+      font-size: 12px;
+      opacity: .8;
+    }
+    @media (max-width: 768px) {
+      .swipeHint { display: block; }
     }
 
     .picksGrid {
@@ -101,13 +130,13 @@
       min-width: 260px;
       max-width: 360px;
 
-      /* ✅ allow matchup column to wrap even though other cells are nowrap */
+      /* allow matchup column to wrap */
       white-space: normal !important;
       line-height: 1.15;
       overflow-wrap: anywhere;
     }
 
-    /* ✅ On mobile, make matchup column narrower */
+    /* On mobile, make matchup column narrower */
     @media (max-width: 768px) {
       .picksGrid .matchupCol {
         min-width: 140px;
@@ -115,11 +144,9 @@
       }
     }
 
-    /* Optional: on very small phones, unsticks the matchup column for easier horizontal scroll */
+    /* Optional: on very small phones, unsticks the matchup column */
     @media (max-width: 480px) {
-      .picksGrid .matchupCol {
-        position: static;
-      }
+      .picksGrid .matchupCol { position: static; }
     }
 
     .cell {
@@ -161,7 +188,11 @@
 
       <!-- Picks grid view -->
       <div id="viewPicks" style="display:none;">
-        <div id="picksStatus" class="muted">Loading picks…</div>
+        <div id="picksStatus" class="muted">Click “Picks Grid” to load…</div>
+
+        <!-- ✅ Swipe hint (mobile only) -->
+        <div class="swipeHint">Swipe left/right to see everyone’s picks →</div>
+
         <div class="gridWrap">
           <table class="picksGrid" id="picksGrid" style="display:none;">
             <thead id="picksHead"></thead>
@@ -223,6 +254,8 @@
 
     const GAME_MAP = Object.fromEntries(GAMES.map(g => [g.id, `${g.team1} vs ${g.team2}`]));
 
+    let picksLoaded = false; // ✅ lazy-load flag
+
     // Tabs
     function setActiveTab(which) {
       const tL = document.getElementById("tabLeaderboard");
@@ -235,6 +268,13 @@
       tP.classList.toggle("active", !isL);
       vL.style.display = isL ? "" : "none";
       vP.style.display = isL ? "none" : "";
+
+      // ✅ Lazy-load picks when tab is opened
+      if (!isL && !picksLoaded) {
+        picksLoaded = true;
+        document.getElementById("picksStatus").textContent = "Loading picks…";
+        loadPicksGrid();
+      }
     }
 
     document.getElementById("tabLeaderboard").addEventListener("click", () => setActiveTab("leaderboard"));
@@ -342,8 +382,7 @@
     }
 
     // Boot
-    loadLeaderboard();
-    loadPicksGrid();
+    loadLeaderboard(); // ✅ picks loads when tab is opened
   </script>
 </body>
 </html>

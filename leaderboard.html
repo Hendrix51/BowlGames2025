@@ -318,7 +318,13 @@
            team1: "Arizona", team2: "SMU", spread1: "-3", spread2: "+3" },
     ];
 
-    const GAME_MAP = Object.fromEntries(GAMES.map(g => [g.id, `${g.team1} vs ${g.team2}`]));
+    const GAME_MAP = Object.fromEntries(
+        GAMES.map(g => [
+            g.id,
+            `${g.team1}${g.spread1 ? " (" + g.spread1 + ")" : ""} vs ${g.team2}${g.spread2 ? " (" + g.spread2 + ")" : ""}`
+        ])
+    );
+
     let picksLoaded = false;
 
     function setActiveTab(which) {

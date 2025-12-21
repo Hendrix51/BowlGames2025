@@ -136,6 +136,25 @@
       margin-left: 8px;
       opacity: .9;
     }
+
+    /* adding for the OU */
+    .ouRow { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top: 6px; }
+    .ouRow input[type="number"]{
+      width: 120px;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      font-size: 14px;
+    }
+    .pill {
+      display:inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.06);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    
   </style>
 </head>
 
@@ -344,6 +363,7 @@
     const elYourPicksList = document.getElementById("yourPicksList");
 
     const picks = {}; // gameId -> pickedTeam
+    const ouPicks = {};
     let locked = false;
 
     function escapeHtml(s) {

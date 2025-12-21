@@ -425,7 +425,12 @@
         return;
       }
 
-      const gameIds = data.gameIds || [];
+      //const gameIds = data.gameIds || [];
+
+      //for second round update
+      const allGameIds = data.gameIds || [];
+      const gameIds = allGameIds.filter(isGameRevealed);
+
       const winners = data.winners || {};
       const users = data.users || [];
       const userPicks = data.userPicks || {};

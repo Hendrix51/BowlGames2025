@@ -112,6 +112,17 @@
       margin-top: 6px;
     }
 
+    .nameSelect {
+      width: 320px;
+      max-width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      font-size: 14px;
+      background: #fff;
+    }
+
+
     /* ---------- "Your Picks" ---------- */
     #yourPicksCard { display: none; }
     .yourPicksList { margin: 0; padding-left: 18px; }
@@ -138,13 +149,45 @@
         <p class="sub">Payouts tbd - will be based on total pool size.</p>
 
         <a class="leaderboard-btn" href="leaderboard.html">View Leaderboard & Picks</a>
-
-        <div class="row" style="margin-top:12px;">
+<!-- code for initial round-->
+        <!-- <div class="row" style="margin-top:12px;">
           <input id="name" type="text" placeholder="Your name (required)" />
           <button id="submitBtn" class="primary" disabled>Submit Picks</button>
           <button id="editBtn" class="ghost" style="display:none;">Change Picks</button>
           <span id="status" class="small"></span>
+        </div> -->
+<!-- code for initial round-->   
+
+        <!-- code for round 2 when more games come out-->
+        <div class="row" style="margin-top:12px;">
+          <select id="name" class="nameSelect">
+            <option value="" selected disabled>Select your name…</option>
+
+            <option>Josh</option>
+            <option>James</option>
+            <option>Tyler Clarke</option>
+            <option>Max Fihma</option>
+            <option>Maxwell</option>
+            <option>Jeff &amp; Krissy</option>
+            <option>Aaron B</option>
+            <option>Charlie Ben-Ami</option>
+            <option>Billy A</option>
+            <option>Raf</option>
+            <option>Jack Powers</option>
+            <option>Andy Barnett</option>
+            <option>Chris Barnett</option>
+            <option>Austin Belcher</option>
+            <option>Holly and Ellie</option>
+            <option>Martig</option>
+            <option>Harold</option>
+            <option>olivermichaud</option>
+          </select>
+
+          <button id="submitBtn" class="primary" disabled>Submit Picks</button>
+          <button id="editBtn" class="ghost" style="display:none;">Change Picks</button>
+          <span id="status" class="small"></span>
         </div>
+     
       </div>
     </div>
 
@@ -390,8 +433,12 @@
       elYourPicksCard.style.display = "";
       elYourPicksCard.scrollIntoView({ behavior: "smooth", block: "start" });
     }
+    // For initial round
+    // elName.addEventListener("input", validate);
 
-    elName.addEventListener("input", validate);
+    // For second round
+    elName.addEventListener("change", validate);
+
 
     elEdit.addEventListener("click", () => {
       elYourPicksCard.style.display = "none";

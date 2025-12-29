@@ -215,16 +215,16 @@
     // Optional: include ouLine if you want to display sportsbook total.
     const GAMES = [
       { id: "cotton-bowl-2025-12-31", date: "Dec 31, 2025", bowl: "Cotton Bowl",
-        team1: "Miami (FL)", team2: "Ohio State", spread1: "+10", spread2: "-10", ouLine: "" },
+        team1: "Miami (FL)", team2: "Ohio State", spread1: "+9.5", spread2: "-9.5", ouLine: "Current Total Line is 41.5" },
 
       { id: "orange-bowl-2026-01-01", date: "Jan 1, 2026", bowl: "Orange Bowl",
-        team1: "Oregon", team2: "Texas Tech", spread1: "-1.5", spread2: "+1.5", ouLine: "" },
+        team1: "Oregon", team2: "Texas Tech", spread1: "-2.5", spread2: "+2.5", ouLine: "Current Total Line is 51.5" },
 
       { id: "rose-bowl-2026-01-01", date: "Jan 1, 2026", bowl: "Rose Bowl",
-        team1: "Alabama", team2: "Indiana", spread1: "+7", spread2: "-7", ouLine: "" },
+        team1: "Alabama", team2: "Indiana", spread1: "+7", spread2: "-7", ouLine: "Current Total Line is 47.5" },
 
       { id: "sugar-bowl-2026-01-01", date: "Jan 1, 2026", bowl: "Sugar Bowl",
-        team1: "Ole Miss", team2: "UGA", spread1: "+7", spread2: "-7", ouLine: "" },
+        team1: "Ole Miss", team2: "UGA", spread1: "+6.5", spread2: "-6.5", ouLine: "Current Total Line is 55.5" },
     ];
 
     const elGames = document.getElementById("games");
@@ -281,7 +281,7 @@
 
           <div class="ouRow">
             <label for="${ouId}" style="font-weight:700;">O/U prediction</label>
-            <input id="${ouId}" type="number" step="0.5" inputmode="decimal" placeholder="e.g., 55.5">
+            <input id="${ouId}" type="number" step="0.5" inputmode="decimal" placeholder="${escapeHtml(g.ouLine || '')}">
             ${ouHint}
           </div>
         `;

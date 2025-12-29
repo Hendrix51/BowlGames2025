@@ -26,7 +26,7 @@
       <div class="row" style="justify-content:space-between;">
         <div>
           <h1>Over/Under Grid</h1>
-          <p class="sub">Everyone’s O/U predictions by game. Leaderboard is lowest total error once results are entered.</p>
+          <p class="sub">Everyone’s O/U predictions by game. Leaderboard = lowest total absolute error once actual totals are entered.</p>
         </div>
         <div class="row">
           <a class="btn" href="index.html">Back to Picks</a>
@@ -65,30 +65,40 @@
     function fmtNum(x) {
       if (x === null || x === undefined || x === "") return "";
       const n = Number(x);
-      return Number.isFinite(n) ? (Math.round(n*10)/10).toString() : "";
+      return Number.isFinite(n) ? (Math.round(n * 10) / 10).toString() : "";
     }
 
     async function load() {
       try {
-        const url = SCRIPT_URL + "?action=ouGrid";
-        const res = await fetch(url, { method: "GET" });
-        const data = await res.json();
+        // Apps Script endpoints:
+        //  - ?action=ou_grid -> { ok, gameIds, totals, users, userOUPicks }
+        //  - ?action=ou_leaderboard -> { ok, rows: [{name,totalError}, ...] }
+        const [gridRes, lbRes] = await Promise.all([
+          fetch(SCRIPT_URL + "?action=ou_grid", { method: "GET" }),
+          fetch(SCRIPT_URL + "?action=ou_leaderboard", { method: "GET" })
+        ]);
 
-        if (!data.ok) throw new Error(data.error || "Failed to load");
+        const gridData = await gridRes.json();
+        const lbData = await lbRes.json();
 
-        elStatus.textContent = data.hasResults
+        if (!gridData.ok) throw new Error(gridData.error || "Failed to load O/U grid");
+        if (!lbData.ok) throw new Error(lbData.error || "Failed to load O/U leaderboard");
+
+        const hasResults = gridData.totals && Object.keys(gridData.totals).length > 0;
+
+        elStatus.textContent = hasResults
           ? "Results detected — leaderboard uses total absolute error."
-          : "No results entered yet — leaderboard will populate once you enter final totals.";
+          : "No results entered yet — add actual totals in the OU_Results tab to populate leaderboard.";
 
-        renderLeaderboard(data.ouLeaderboard || []);
-        renderGrid(data.games || [], data.rows || [], data.resultsByGameId || {});
+        renderLeaderboard(lbData.rows || []);
+        renderGrid(gridData.gameIds || [], gridData.users || [], gridData.userOUPicks || {}, gridData.totals || {});
       } catch (e) {
         elStatus.textContent = "Error: " + e.message;
       }
     }
 
-    function renderLeaderboard(lb) {
-      if (!lb.length) {
+    function renderLeaderboard(rows) {
+      if (!rows.length) {
         elLb.innerHTML = `<div class="muted">No leaderboard yet (results not entered).</div>`;
         return;
       }
@@ -100,16 +110,14 @@
               <th>Rank</th>
               <th>Name</th>
               <th>Total Error</th>
-              <th>Avg Error</th>
             </tr>
           </thead>
           <tbody>
-            ${lb.map((r, i) => `
+            ${rows.map((r, i) => `
               <tr>
-                <td>${i+1}</td>
+                <td>${i + 1}</td>
                 <td><strong>${escapeHtml(r.name)}</strong></td>
-                <td>${escapeHtml(r.totalError)}</td>
-                <td>${escapeHtml(r.avgError)}</td>
+                <td>${escapeHtml(fmtNum(r.totalError))}</td>
               </tr>
             `).join("")}
           </tbody>
@@ -117,51 +125,74 @@
       `;
     }
 
-    function renderGrid(games, rows, resultsByGameId) {
+    function renderGrid(gameIds, users, userOUPicks, totals) {
+      // Header row
       const thead = `
         <thead>
           <tr>
             <th class="namecol">Name</th>
-            ${games.map(g => {
-              const actual = resultsByGameId[g.id]?.actualTotal;
-              const actualTxt = (actual !== undefined) ? `<div class="muted">Actual: ${escapeHtml(fmtNum(actual))}</div>` : "";
-              const lineTxt = (g.ouLine !== undefined && g.ouLine !== null && g.ouLine !== "")
-                ? `<div class="muted">Line: ${escapeHtml(fmtNum(g.ouLine))}</div>` : "";
-              return `<th>
-                <div><strong>${escapeHtml(g.bowl)}</strong></div>
-                <div class="muted">${escapeHtml(g.team1)} vs ${escapeHtml(g.team2)}</div>
-                ${lineTxt}
-                ${actualTxt}
-              </th>`;
+            ${gameIds.map(gid => {
+              const actual = totals && Object.prototype.hasOwnProperty.call(totals, gid) ? totals[gid] : undefined;
+              const actualTxt = (actual !== undefined)
+                ? `<div class="muted">Actual: ${escapeHtml(fmtNum(actual))}</div>`
+                : `<div class="muted">Actual: —</div>`;
+              return `
+                <th>
+                  <div><strong>${escapeHtml(gid)}</strong></div>
+                  ${actualTxt}
+                </th>
+              `;
             }).join("")}
           </tr>
         </thead>
       `;
 
+      // Body rows
       const tbody = `
         <tbody>
-          ${rows.map(r => `
-            <tr>
-              <td class="namecol">${escapeHtml(r.name)}</td>
-              ${games.map(g => {
-                const pick = r.ouPicks?.[g.id];
-                const actual = resultsByGameId[g.id]?.actualTotal;
-                let extra = "";
-                if (actual !== undefined && pick !== undefined && pick !== null && pick !== "") {
-                  const diff = Math.abs(Number(pick) - Number(actual));
-                  if (Number.isFinite(diff)) extra = `<div class="muted">Δ ${escapeHtml(fmtNum(diff))}</div>`;
-                }
-                return `<td>
-                  <div><strong>${escapeHtml(fmtNum(pick))}</strong></div>
-                  ${extra}
-                </td>`;
-              }).join("")}
-            </tr>
-          `).join("")}
+          ${users.map(name => {
+            const picksObj = userOUPicks && userOUPicks[name] ? userOUPicks[name] : {};
+            return `
+              <tr>
+                <td class="namecol">${escapeHtml(name)}</td>
+                ${gameIds.map(gid => {
+                  const pick = picksObj ? picksObj[gid] : undefined;
+                  const actual = totals && Object.prototype.hasOwnProperty.call(totals, gid) ? totals[gid] : undefined;
+
+                  let extra = "";
+                  if (actual !== undefined && pick !== undefined && pick !== null && pick !== "") {
+                    const diff = Math.abs(Number(pick) - Number(actual));
+                    if (Number.isFinite(diff)) extra = `<div class="muted">Δ ${escapeHtml(fmtNum(diff))}</div>`;
+                  }
+
+                  return `
+                    <td>
+                      <div><strong>${escapeHtml(fmtNum(pick))}</strong></div>
+                      ${extra}
+                    </td>
+                  `;
+                }).join("")}
+              </tr>
+            `;
+          }).join("")}
         </tbody>
       `;
 
       elGrid.innerHTML = thead + tbody;
+
+      // Helpful empty-state
+      if (!gameIds.length) {
+        elGrid.innerHTML = `
+          <tbody>
+            <tr>
+              <td class="muted">
+                No games found for O/U yet.
+                Add your game IDs to the <strong>OU_Results</strong> sheet (column A, header <code>game_id</code>).
+              </td>
+            </tr>
+          </tbody>
+        `;
+      }
     }
 
     load();

@@ -18,7 +18,7 @@
       background-position: center;
       background-repeat: no-repeat;
       z-index: -2;
-      transform: translateZ(0); /* helps some mobile rendering */
+      transform: translateZ(0);
     }
 
     body::before {
@@ -33,13 +33,13 @@
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
       margin: 0;
       color: #111;
-      min-height: 100vh;   /* fallback */
-      min-height: 100svh;  /* modern */
+      min-height: 100vh;
+      min-height: 100svh;
       background: transparent;
     }
 
     @media (max-width: 768px) {
-      /* show more of the “top” of the photo on phones */
+      /* show more of the top of the photo on phones */
       html::before { background-position: center 20%; }
     }
 
@@ -58,15 +58,6 @@
     .sub { margin: 0 0 12px; opacity: .75; }
 
     .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-
-    input[type="text"] {
-      width: 320px;
-      max-width: 100%;
-      padding: 10px 12px;
-      border: 1px solid #ddd;
-      border-radius: 10px;
-      font-size: 14px;
-    }
 
     button {
       padding: 10px 14px;
@@ -96,7 +87,7 @@
     .err { color: #b00020; font-weight: 700; }
     .small { font-size: 12px; opacity: .75; }
 
-    /* ✅ Make sticky header NOT block the background image */
+    /* ✅ Sticky header that doesn't block the background image */
     .sticky {
       position: sticky;
       top: 0;
@@ -116,6 +107,7 @@
       text-decoration: none;
       font-weight: 700;
       margin-top: 6px;
+      margin-right: 8px;
     }
 
     .nameSelect {
@@ -141,6 +133,24 @@
       margin-left: 8px;
       opacity: .9;
     }
+
+    /* ---------- O/U row ---------- */
+    .ouRow { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top: 6px; }
+    .ouRow input[type="number"]{
+      width: 140px;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      font-size: 14px;
+    }
+    .pill {
+      display:inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.06);
+      font-size: 12px;
+      font-weight: 700;
+    }
   </style>
 </head>
 
@@ -149,11 +159,14 @@
     <div class="sticky">
       <div class="card">
         <h1>College Football Bowl Pick’em 2025</h1>
-        <p class="sub">Pick spreads for each game, then submit.</p>
+        <p class="sub">Pick spreads for each game and enter an Over/Under prediction, then submit.</p>
         <p class="sub">New and improved format this year, thanks ChatGPT.</p>
         <p class="sub">Payouts tbd - will be based on total pool size.</p>
 
-        <a class="leaderboard-btn" href="leaderboard.html">View Leaderboard & Picks</a>
+        <div class="row" style="gap:8px;">
+          <a class="leaderboard-btn" href="leaderboard.html">View Spread Leaderboard</a>
+          <a class="leaderboard-btn" href="ou.html">View O/U Grid</a>
+        </div>
 
         <div class="row" style="margin-top:12px;">
           <select id="name" class="nameSelect">
@@ -185,6 +198,7 @@
       </div>
     </div>
 
+    <!-- ✅ Shows after submit -->
     <div id="yourPicksCard" class="card">
       <h2>Your Picks</h2>
       <p class="sub" id="yourPicksSubtitle"></p>
@@ -197,18 +211,20 @@
   <script>
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzDZv4jHUdu7t7crWX4-3GToFzvHKofDSfNANUrVyGCs0Igb3HPYWw8liHOEoIZGHKmnA/exec";
 
+    // ✅ Replace this with your FULL list. Important: every game MUST have a unique id.
+    // Optional: include ouLine if you want to display sportsbook total.
     const GAMES = [
       { id: "cotton-bowl-2025-12-31", date: "Dec 31, 2025", bowl: "Cotton Bowl",
-        team1: "Miami (FL)", team2: "Ohio State", spread1: "+10", spread2: "-10" },
+        team1: "Miami (FL)", team2: "Ohio State", spread1: "+10", spread2: "-10", ouLine: "" },
 
       { id: "orange-bowl-2026-01-01", date: "Jan 1, 2026", bowl: "Orange Bowl",
-        team1: "Oregon", team2: "Texas Tech", spread1: "-1.5", spread2: "+1.5" },
+        team1: "Oregon", team2: "Texas Tech", spread1: "-1.5", spread2: "+1.5", ouLine: "" },
 
       { id: "rose-bowl-2026-01-01", date: "Jan 1, 2026", bowl: "Rose Bowl",
-        team1: "Alabama", team2: "Indiana", spread1: "+7", spread2: "-7" },
+        team1: "Alabama", team2: "Indiana", spread1: "+7", spread2: "-7", ouLine: "" },
 
       { id: "sugar-bowl-2026-01-01", date: "Jan 1, 2026", bowl: "Sugar Bowl",
-        team1: "Ole Miss", team2: "UGA", spread1: "+7", spread2: "-7" },
+        team1: "Ole Miss", team2: "UGA", spread1: "+7", spread2: "-7", ouLine: "" },
     ];
 
     const elGames = document.getElementById("games");
@@ -221,7 +237,8 @@
     const elYourPicksSubtitle = document.getElementById("yourPicksSubtitle");
     const elYourPicksList = document.getElementById("yourPicksList");
 
-    const picks = {}; // gameId -> pickedTeam
+    const picks = {};   // gameId -> pickedTeam
+    const ouPicks = {}; // gameId -> number
     let locked = false;
 
     function escapeHtml(s) {
@@ -240,12 +257,17 @@
         const t1Label = `${g.team1} ${g.spread1 || ""}`.trim();
         const t2Label = `${g.team2} ${g.spread2 || ""}`.trim();
 
-        // ✅ Do NOT escape g.id inside attributes; keep it consistent for JS selectors.
         const groupName = `pick-${g.id}`;
+        const ouId = `ou-${g.id}`;
+
+        const ouHint = (g.ouLine !== undefined && g.ouLine !== null && g.ouLine !== "")
+          ? `<span class="pill">Line: ${escapeHtml(g.ouLine)}</span>`
+          : "";
 
         card.innerHTML = `
           <div class="meta">${escapeHtml(g.date)} - ${escapeHtml(g.bowl)}</div>
           <div class="teams">${escapeHtml(g.team1)} vs ${escapeHtml(g.team2)}</div>
+
           <div class="pickRow">
             <label>
               <input type="radio" name="${groupName}" value="${escapeHtml(g.team1)}">
@@ -256,17 +278,24 @@
               ${escapeHtml(t2Label)}
             </label>
           </div>
+
+          <div class="ouRow">
+            <label for="${ouId}" style="font-weight:700;">O/U prediction</label>
+            <input id="${ouId}" type="number" step="0.5" inputmode="decimal" placeholder="e.g., 55.5">
+            ${ouHint}
+          </div>
         `;
 
         elGames.appendChild(card);
 
-        // Restore selection (if any)
+        // Restore spread selection (if any)
         const selected = picks[g.id];
         if (selected) {
           const sel = card.querySelector(`input[value="${CSS.escape(selected)}"]`);
           if (sel) sel.checked = true;
         }
 
+        // Spread listeners
         card.querySelectorAll(`input[name="${CSS.escape(groupName)}"]`).forEach(inp => {
           inp.disabled = locked;
           inp.addEventListener("change", e => {
@@ -274,6 +303,19 @@
             validate();
           });
         });
+
+        // Restore O/U (if any) + listeners
+        const ouInput = card.querySelector(`#${CSS.escape(ouId)}`);
+        if (ouInput) {
+          if (ouPicks[g.id] !== undefined) ouInput.value = ouPicks[g.id];
+          ouInput.disabled = locked;
+
+          ouInput.addEventListener("input", (e) => {
+            const v = e.target.value;
+            ouPicks[g.id] = (v === "" ? undefined : Number(v));
+            validate();
+          });
+        }
       }
 
       validate();
@@ -282,14 +324,17 @@
     function validate() {
       const nameOk = elName.value.trim().length > 0;
       const allPicked = GAMES.every(g => picks[g.id]);
+      const allOuFilled = GAMES.every(g => typeof ouPicks[g.id] === "number" && Number.isFinite(ouPicks[g.id]));
       const urlOk = SCRIPT_URL && SCRIPT_URL.startsWith("https://script.google.com/") && SCRIPT_URL.endsWith("/exec");
 
-      elBtn.disabled = locked || !(nameOk && allPicked && urlOk);
+      elBtn.disabled = locked || !(nameOk && allPicked && allOuFilled && urlOk);
 
       elStatus.textContent =
         !urlOk ? "Fix SCRIPT_URL (must end with /exec)." :
         !nameOk ? "Select your name." :
-        !allPicked ? "Pick every game." : "";
+        !allPicked ? "Pick every game." :
+        !allOuFilled ? "Enter an O/U prediction for every game." :
+        "";
 
       elStatus.className = "small";
     }
@@ -308,7 +353,12 @@
       elYourPicksList.innerHTML = GAMES.map(g => {
         const matchup = `${g.team1} vs ${g.team2}`;
         const pick = picks[g.id] || "—";
-        return `<li><strong>${escapeHtml(matchup)}</strong><span class="chip">${escapeHtml(pick)}</span></li>`;
+        const ou = (typeof ouPicks[g.id] === "number") ? ouPicks[g.id] : "—";
+        return `<li>
+          <strong>${escapeHtml(matchup)}</strong>
+          <span class="chip">${escapeHtml(pick)}</span>
+          <span class="chip">O/U: ${escapeHtml(ou)}</span>
+        </li>`;
       }).join("");
 
       elYourPicksCard.style.display = "";
@@ -329,7 +379,7 @@
       elStatus.textContent = "Submitting…";
       elStatus.className = "small";
 
-      const payload = { name: elName.value.trim(), picks };
+      const payload = { name: elName.value.trim(), picks, ouPicks };
 
       try {
         const res = await fetch(SCRIPT_URL, {

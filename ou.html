@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>O/U Grid & Leaderboard</title>
+  <style>
+    body { font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; margin:0; background:#f6f7fb; color:#111; }
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 24px; }
+    .card { background:#fff; border-radius: 16px; padding: 18px; box-shadow: 0 6px 20px rgba(0,0,0,.06); margin-bottom: 14px; }
+    h1 { margin:0 0 10px; font-size: 22px; }
+    .sub { margin: 0 0 12px; opacity: .75; }
+    .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    a.btn { display:inline-block; padding:8px 12px; border-radius:10px; background:#111; color:#fff; text-decoration:none; font-weight:700; }
+    table { width:100%; border-collapse: collapse; font-size: 12px; }
+    th, td { border:1px solid #e6e6e6; padding:8px; vertical-align: top; }
+    th { position: sticky; top: 0; background: #fff; z-index: 2; }
+    .namecol { position: sticky; left: 0; background:#fff; z-index:3; font-weight:700; }
+    .muted { opacity:.7; }
+    .ok { color:#0a7a2f; font-weight:700; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="row" style="justify-content:space-between;">
+        <div>
+          <h1>Over/Under Grid</h1>
+          <p class="sub">Everyone’s O/U predictions by game. Leaderboard is lowest total error once results are entered.</p>
+        </div>
+        <div class="row">
+          <a class="btn" href="index.html">Back to Picks</a>
+          <a class="btn" href="leaderboard.html">Spread Leaderboard</a>
+        </div>
+      </div>
+      <div id="status" class="muted">Loading…</div>
+    </div>
+
+    <div class="card">
+      <h1>O/U Leaderboard</h1>
+      <div id="ouLeaderboard"></div>
+    </div>
+
+    <div class="card">
+      <h1>O/U Picks Grid</h1>
+      <div style="overflow:auto;">
+        <table id="grid"></table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzDZv4jHUdu7t7crWX4-3GToFzvHKofDSfNANUrVyGCs0Igb3HPYWw8liHOEoIZGHKmnA/exec";
+
+    const elStatus = document.getElementById("status");
+    const elGrid = document.getElementById("grid");
+    const elLb = document.getElementById("ouLeaderboard");
+
+    function escapeHtml(s) {
+      return String(s ?? "").replace(/[&<>"']/g, c => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+      }[c]));
+    }
+
+    function fmtNum(x) {
+      if (x === null || x === undefined || x === "") return "";
+      const n = Number(x);
+      return Number.isFinite(n) ? (Math.round(n*10)/10).toString() : "";
+    }
+
+    async function load() {
+      try {
+        const url = SCRIPT_URL + "?action=ouGrid";
+        const res = await fetch(url, { method: "GET" });
+        const data = await res.json();
+
+        if (!data.ok) throw new Error(data.error || "Failed to load");
+
+        elStatus.textContent = data.hasResults
+          ? "Results detected — leaderboard uses total absolute error."
+          : "No results entered yet — leaderboard will populate once you enter final totals.";
+
+        renderLeaderboard(data.ouLeaderboard || []);
+        renderGrid(data.games || [], data.rows || [], data.resultsByGameId || {});
+      } catch (e) {
+        elStatus.textContent = "Error: " + e.message;
+      }
+    }
+
+    function renderLeaderboard(lb) {
+      if (!lb.length) {
+        elLb.innerHTML = `<div class="muted">No leaderboard yet (results not entered).</div>`;
+        return;
+      }
+
+      elLb.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Name</th>
+              <th>Total Error</th>
+              <th>Avg Error</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${lb.map((r, i) => `
+              <tr>
+                <td>${i+1}</td>
+                <td><strong>${escapeHtml(r.name)}</strong></td>
+                <td>${escapeHtml(r.totalError)}</td>
+                <td>${escapeHtml(r.avgError)}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function renderGrid(games, rows, resultsByGameId) {
+      const thead = `
+        <thead>
+          <tr>
+            <th class="namecol">Name</th>
+            ${games.map(g => {
+              const actual = resultsByGameId[g.id]?.actualTotal;
+              const actualTxt = (actual !== undefined) ? `<div class="muted">Actual: ${escapeHtml(fmtNum(actual))}</div>` : "";
+              const lineTxt = (g.ouLine !== undefined && g.ouLine !== null && g.ouLine !== "")
+                ? `<div class="muted">Line: ${escapeHtml(fmtNum(g.ouLine))}</div>` : "";
+              return `<th>
+                <div><strong>${escapeHtml(g.bowl)}</strong></div>
+                <div class="muted">${escapeHtml(g.team1)} vs ${escapeHtml(g.team2)}</div>
+                ${lineTxt}
+                ${actualTxt}
+              </th>`;
+            }).join("")}
+          </tr>
+        </thead>
+      `;
+
+      const tbody = `
+        <tbody>
+          ${rows.map(r => `
+            <tr>
+              <td class="namecol">${escapeHtml(r.name)}</td>
+              ${games.map(g => {
+                const pick = r.ouPicks?.[g.id];
+                const actual = resultsByGameId[g.id]?.actualTotal;
+                let extra = "";
+                if (actual !== undefined && pick !== undefined && pick !== null && pick !== "") {
+                  const diff = Math.abs(Number(pick) - Number(actual));
+                  if (Number.isFinite(diff)) extra = `<div class="muted">Δ ${escapeHtml(fmtNum(diff))}</div>`;
+                }
+                return `<td>
+                  <div><strong>${escapeHtml(fmtNum(pick))}</strong></div>
+                  ${extra}
+                </td>`;
+              }).join("")}
+            </tr>
+          `).join("")}
+        </tbody>
+      `;
+
+      elGrid.innerHTML = thead + tbody;
+    }
+
+    load();
+  </script>
+</body>
+</html>

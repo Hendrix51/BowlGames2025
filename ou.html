@@ -75,7 +75,7 @@
     <div class="card">
       <div class="row" style="justify-content:space-between;">
         <div>
-          <h1>Over/Under Grid</h1>
+          <h1>Total Points Picks</h1>
           <p class="sub">Everyone’s Total Points predictions by game. Leaderboard = lowest total absolute error once actual totals are entered.</p>
         </div>
         <div class="row">
@@ -154,9 +154,9 @@
 
         const hasResults = gridData.totals && Object.keys(gridData.totals).some(k => gameIds.includes(k));
 
-        elStatus.textContent = hasResults
-          ? "Results detected — leaderboard uses total absolute error."
-          : "No results entered yet — add actual totals in the OU_Results tab to populate leaderboard.";
+        // elStatus.textContent = hasResults
+        //   ? "Results detected — leaderboard uses total absolute error."
+        //   : "No results entered yet — add actual totals in the OU_Results tab to populate leaderboard.";
 
         renderLeaderboard(lbData.rows || []);
         renderGrid(gameIds, gridData.users || [], gridData.userOUPicks || {}, gridData.totals || {});

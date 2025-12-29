@@ -5,19 +5,69 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>O/U Grid & Leaderboard</title>
   <style>
-    body { font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; margin:0; background:#f6f7fb; color:#111; }
+    /* ---------- Background (match your other pages) ---------- */
+    html { height: 100%; }
+
+    html::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image: url("assets/kick6.webp");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      z-index: -2;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: rgba(246, 247, 251, 0.85);
+      z-index: -1;
+    }
+
+    body {
+      font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      margin: 0;
+      color: #111;
+      min-height: 100svh;
+      background: transparent;
+    }
+
+    @media (max-width: 768px) {
+      html::before { background-position: center top; }
+    }
+
+    /* ---------- Layout ---------- */
     .wrap { max-width: 1200px; margin: 0 auto; padding: 24px; }
     .card { background:#fff; border-radius: 16px; padding: 18px; box-shadow: 0 6px 20px rgba(0,0,0,.06); margin-bottom: 14px; }
     h1 { margin:0 0 10px; font-size: 22px; }
     .sub { margin: 0 0 12px; opacity: .75; }
     .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
     a.btn { display:inline-block; padding:8px 12px; border-radius:10px; background:#111; color:#fff; text-decoration:none; font-weight:700; }
+
+    /* ---------- Tables ---------- */
     table { width:100%; border-collapse: collapse; font-size: 12px; }
-    th, td { border:1px solid #e6e6e6; padding:8px; vertical-align: top; }
+    th, td {
+      border:1px solid #e6e6e6;
+      padding:8px;
+      vertical-align: middle;
+      text-align: center;        /* ✅ center all table text by default */
+    }
     th { position: sticky; top: 0; background: #fff; z-index: 2; }
-    .namecol { position: sticky; left: 0; background:#fff; z-index:3; font-weight:700; }
+
+    .namecol {
+      position: sticky;
+      left: 0;
+      background:#fff;
+      z-index:3;
+      font-weight:700;
+      text-align: left;          /* ✅ keep names readable */
+      white-space: nowrap;
+    }
+
     .muted { opacity:.7; }
-    .ok { color:#0a7a2f; font-weight:700; }
   </style>
 </head>
 <body>
@@ -52,6 +102,24 @@
   <script>
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzDZv4jHUdu7t7crWX4-3GToFzvHKofDSfNANUrVyGCs0Igb3HPYWw8liHOEoIZGHKmnA/exec";
 
+    // ✅ Only games that matter for O/U (your list)
+    const GAMES = [
+      { id: "cotton-bowl-2025-12-31", date: "Dec 31, 2025", bowl: "Cotton Bowl",
+        team1: "Miami (FL)", team2: "Ohio State", spread1: "+10", spread2: "-10", ouLine: "" },
+
+      { id: "orange-bowl-2026-01-01", date: "Jan 1, 2026", bowl: "Orange Bowl",
+        team1: "Oregon", team2: "Texas Tech", spread1: "-1.5", spread2: "+1.5", ouLine: "" },
+
+      { id: "rose-bowl-2026-01-01", date: "Jan 1, 2026", bowl: "Rose Bowl",
+        team1: "Alabama", team2: "Indiana", spread1: "+7", spread2: "-7", ouLine: "" },
+
+      { id: "sugar-bowl-2026-01-01", date: "Jan 1, 2026", bowl: "Sugar Bowl",
+        team1: "Ole Miss", team2: "UGA", spread1: "+7", spread2: "-7", ouLine: "" },
+    ];
+
+    const GAME_META = Object.fromEntries(GAMES.map(g => [g.id, g]));
+    const GAME_MATCHUP = Object.fromEntries(GAMES.map(g => [g.id, `${g.team1} vs ${g.team2}`]));
+
     const elStatus = document.getElementById("status");
     const elGrid = document.getElementById("grid");
     const elLb = document.getElementById("ouLeaderboard");
@@ -70,9 +138,6 @@
 
     async function load() {
       try {
-        // Apps Script endpoints:
-        //  - ?action=ou_grid -> { ok, gameIds, totals, users, userOUPicks }
-        //  - ?action=ou_leaderboard -> { ok, rows: [{name,totalError}, ...] }
         const [gridRes, lbRes] = await Promise.all([
           fetch(SCRIPT_URL + "?action=ou_grid", { method: "GET" }),
           fetch(SCRIPT_URL + "?action=ou_leaderboard", { method: "GET" })
@@ -84,14 +149,17 @@
         if (!gridData.ok) throw new Error(gridData.error || "Failed to load O/U grid");
         if (!lbData.ok) throw new Error(lbData.error || "Failed to load O/U leaderboard");
 
-        const hasResults = gridData.totals && Object.keys(gridData.totals).length > 0;
+        // Only show these 4 games, in this order
+        const gameIds = GAMES.map(g => g.id);
+
+        const hasResults = gridData.totals && Object.keys(gridData.totals).some(k => gameIds.includes(k));
 
         elStatus.textContent = hasResults
           ? "Results detected — leaderboard uses total absolute error."
           : "No results entered yet — add actual totals in the OU_Results tab to populate leaderboard.";
 
         renderLeaderboard(lbData.rows || []);
-        renderGrid(gridData.gameIds || [], gridData.users || [], gridData.userOUPicks || {}, gridData.totals || {});
+        renderGrid(gameIds, gridData.users || [], gridData.userOUPicks || {}, gridData.totals || {});
       } catch (e) {
         elStatus.textContent = "Error: " + e.message;
       }
@@ -99,7 +167,7 @@
 
     function renderLeaderboard(rows) {
       if (!rows.length) {
-        elLb.innerHTML = `<div class="muted">No leaderboard yet (results not entered).</div>`;
+        elLb.innerHTML = `<div class="muted" style="text-align:left;">No leaderboard yet (results not entered).</div>`;
         return;
       }
 
@@ -126,19 +194,27 @@
     }
 
     function renderGrid(gameIds, users, userOUPicks, totals) {
-      // Header row
       const thead = `
         <thead>
           <tr>
             <th class="namecol">Name</th>
             ${gameIds.map(gid => {
-              const actual = totals && Object.prototype.hasOwnProperty.call(totals, gid) ? totals[gid] : undefined;
+              const g = GAME_META[gid];
+              const actual = (totals && Object.prototype.hasOwnProperty.call(totals, gid)) ? totals[gid] : undefined;
+
               const actualTxt = (actual !== undefined)
                 ? `<div class="muted">Actual: ${escapeHtml(fmtNum(actual))}</div>`
                 : `<div class="muted">Actual: —</div>`;
+
+              const lineTxt = (g && g.ouLine !== undefined && g.ouLine !== null && g.ouLine !== "")
+                ? `<div class="muted">Line: ${escapeHtml(fmtNum(g.ouLine))}</div>`
+                : "";
+
               return `
                 <th>
-                  <div><strong>${escapeHtml(gid)}</strong></div>
+                  <div><strong>${escapeHtml(GAME_MATCHUP[gid] || gid)}</strong></div>
+                  <div class="muted">${escapeHtml(g ? g.bowl : "")}</div>
+                  ${lineTxt}
                   ${actualTxt}
                 </th>
               `;
@@ -147,17 +223,16 @@
         </thead>
       `;
 
-      // Body rows
       const tbody = `
         <tbody>
-          ${users.map(name => {
+          ${(users.length ? users : []).map(name => {
             const picksObj = userOUPicks && userOUPicks[name] ? userOUPicks[name] : {};
             return `
               <tr>
                 <td class="namecol">${escapeHtml(name)}</td>
                 ${gameIds.map(gid => {
                   const pick = picksObj ? picksObj[gid] : undefined;
-                  const actual = totals && Object.prototype.hasOwnProperty.call(totals, gid) ? totals[gid] : undefined;
+                  const actual = (totals && Object.prototype.hasOwnProperty.call(totals, gid)) ? totals[gid] : undefined;
 
                   let extra = "";
                   if (actual !== undefined && pick !== undefined && pick !== null && pick !== "") {
@@ -180,15 +255,12 @@
 
       elGrid.innerHTML = thead + tbody;
 
-      // Helpful empty-state
-      if (!gameIds.length) {
-        elGrid.innerHTML = `
+      if (!users.length) {
+        elGrid.innerHTML = thead + `
           <tbody>
             <tr>
-              <td class="muted">
-                No games found for O/U yet.
-                Add your game IDs to the <strong>OU_Results</strong> sheet (column A, header <code>game_id</code>).
-              </td>
+              <td class="namecol muted">—</td>
+              ${gameIds.map(() => `<td class="muted">No submissions yet</td>`).join("")}
             </tr>
           </tbody>
         `;

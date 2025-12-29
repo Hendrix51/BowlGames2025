@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>O/U Grid & Leaderboard</title>
+  <title>Total Points Grid & Leaderboard</title>
   <style>
     /* ---------- Background (match your other pages) ---------- */
     html { height: 100%; }
@@ -53,7 +53,7 @@
       border:1px solid #e6e6e6;
       padding:8px;
       vertical-align: middle;
-      text-align: center;        /* ✅ center all table text by default */
+      text-align: center;
     }
     th { position: sticky; top: 0; background: #fff; z-index: 2; }
 
@@ -63,7 +63,7 @@
       background:#fff;
       z-index:3;
       font-weight:700;
-      text-align: left;          /* ✅ keep names readable */
+      text-align: left;
       white-space: nowrap;
     }
 
@@ -93,7 +93,8 @@
 
     <div class="card">
       <h1>Total Points Grid</h1>
-      <div style="overflow:auto;">
+      <div id="ouGridStatus" class="muted" style="margin-bottom:10px;"></div>
+      <div id="ouGridWrap" style="overflow:auto; display:none;">
         <table id="grid"></table>
       </div>
     </div>
@@ -102,7 +103,7 @@
   <script>
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzDZv4jHUdu7t7crWX4-3GToFzvHKofDSfNANUrVyGCs0Igb3HPYWw8liHOEoIZGHKmnA/exec";
 
-    // ✅ Only games that matter for O/U (your list)
+    // ✅ Only games that matter (your list)
     const GAMES = [
       { id: "cotton-bowl-2025-12-31", date: "Dec 31, 2025", bowl: "Cotton Bowl",
         team1: "Miami (FL)", team2: "Ohio State", spread1: "+10", spread2: "-10", ouLine: "" },
@@ -123,6 +124,12 @@
     const elStatus = document.getElementById("status");
     const elGrid = document.getElementById("grid");
     const elLb = document.getElementById("ouLeaderboard");
+    const elGridWrap = document.getElementById("ouGridWrap");
+    const elGridStatus = document.getElementById("ouGridStatus");
+
+    // ✅ LOCK UNTIL: Dec 31, 2025 7:00 PM ET
+    const UNLOCK_AT_ET = new Date("2025-12-31T19:00:00-05:00").getTime();
+    const UNLOCKED = () => Date.now() >= UNLOCK_AT_ET;
 
     function escapeHtml(s) {
       return String(s ?? "").replace(/[&<>"']/g, c => ({
@@ -136,33 +143,56 @@
       return Number.isFinite(n) ? (Math.round(n * 10) / 10).toString() : "";
     }
 
-    async function load() {
-      try {
-        const [gridRes, lbRes] = await Promise.all([
-          fetch(SCRIPT_URL + "?action=ou_grid", { method: "GET" }),
-          fetch(SCRIPT_URL + "?action=ou_leaderboard", { method: "GET" })
-        ]);
+    function formatUnlockTime_() {
+      return new Date(UNLOCK_AT_ET).toLocaleString("en-US", {
+        timeZone: "America/New_York",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit"
+      }) + " ET";
+    }
 
-        const gridData = await gridRes.json();
-        const lbData = await lbRes.json();
+    function applyLockedUI_() {
+      const msg = `Total Points leaderboard + grid will unlock at ${formatUnlockTime_()}.`;
+      elStatus.textContent = msg;
 
-        if (!gridData.ok) throw new Error(gridData.error || "Failed to load O/U grid");
-        if (!lbData.ok) throw new Error(lbData.error || "Failed to load O/U leaderboard");
+      // Hide grid + show message
+      elGridStatus.textContent = msg;
+      elGridWrap.style.display = "none";
+      elGrid.innerHTML = "";
 
-        // Only show these 4 games, in this order
-        const gameIds = GAMES.map(g => g.id);
+      // Replace leaderboard with message too
+      elLb.innerHTML = `<div class="muted" style="text-align:left;">${escapeHtml(msg)}</div>`;
+    }
 
-        const hasResults = gridData.totals && Object.keys(gridData.totals).some(k => gameIds.includes(k));
+    async function loadUnlocked_() {
+      // show grid area
+      elGridStatus.textContent = "";
+      elGridWrap.style.display = "";
 
-        elStatus.textContent = hasResults
-          ? "Results"
-          : "No results entered yet — add actual totals in the OU_Results tab to populate leaderboard.";
+      const [gridRes, lbRes] = await Promise.all([
+        fetch(SCRIPT_URL + "?action=ou_grid", { method: "GET" }),
+        fetch(SCRIPT_URL + "?action=ou_leaderboard", { method: "GET" })
+      ]);
 
-        renderLeaderboard(lbData.rows || []);
-        renderGrid(gameIds, gridData.users || [], gridData.userOUPicks || {}, gridData.totals || {});
-      } catch (e) {
-        elStatus.textContent = "Error: " + e.message;
-      }
+      const gridData = await gridRes.json();
+      const lbData = await lbRes.json();
+
+      if (!gridData.ok) throw new Error(gridData.error || "Failed to load Total Points grid");
+      if (!lbData.ok) throw new Error(lbData.error || "Failed to load Total Points leaderboard");
+
+      const gameIds = GAMES.map(g => g.id);
+      const totals = gridData.totals || {};
+      const hasResults = Object.keys(totals).some(k => gameIds.includes(k));
+
+      elStatus.textContent = hasResults
+        ? "Results detected — leaderboard uses total absolute error."
+        : "No results entered yet — add actual totals in the OU_Results tab to populate leaderboard.";
+
+      renderLeaderboard(lbData.rows || []);
+      renderGrid(gameIds, gridData.users || [], gridData.userOUPicks || {}, totals);
     }
 
     function renderLeaderboard(rows) {
@@ -200,21 +230,16 @@
             <th class="namecol">Name</th>
             ${gameIds.map(gid => {
               const g = GAME_META[gid];
-              const actual = (totals && Object.prototype.hasOwnProperty.call(totals, gid)) ? totals[gid] : undefined;
+              const actual = Object.prototype.hasOwnProperty.call(totals, gid) ? totals[gid] : undefined;
 
               const actualTxt = (actual !== undefined)
                 ? `<div class="muted">Actual: ${escapeHtml(fmtNum(actual))}</div>`
                 : `<div class="muted">Actual: —</div>`;
 
-              const lineTxt = (g && g.ouLine !== undefined && g.ouLine !== null && g.ouLine !== "")
-                ? `<div class="muted">Line: ${escapeHtml(fmtNum(g.ouLine))}</div>`
-                : "";
-
               return `
                 <th>
                   <div><strong>${escapeHtml(GAME_MATCHUP[gid] || gid)}</strong></div>
                   <div class="muted">${escapeHtml(g ? g.bowl : "")}</div>
-                  ${lineTxt}
                   ${actualTxt}
                 </th>
               `;
@@ -232,7 +257,7 @@
                 <td class="namecol">${escapeHtml(name)}</td>
                 ${gameIds.map(gid => {
                   const pick = picksObj ? picksObj[gid] : undefined;
-                  const actual = (totals && Object.prototype.hasOwnProperty.call(totals, gid)) ? totals[gid] : undefined;
+                  const actual = Object.prototype.hasOwnProperty.call(totals, gid) ? totals[gid] : undefined;
 
                   let extra = "";
                   if (actual !== undefined && pick !== undefined && pick !== null && pick !== "") {
@@ -267,7 +292,29 @@
       }
     }
 
-    load();
+    async function boot() {
+      if (!UNLOCKED()) {
+        applyLockedUI_();
+
+        // Optional: auto-check unlock every 30s so you don't have to refresh right at 7pm
+        const timer = setInterval(() => {
+          if (UNLOCKED()) {
+            clearInterval(timer);
+            boot();
+          }
+        }, 30000);
+
+        return;
+      }
+
+      try {
+        await loadUnlocked_();
+      } catch (e) {
+        elStatus.textContent = "Error: " + e.message;
+      }
+    }
+
+    boot();
   </script>
 </body>
 </html>

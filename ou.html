@@ -118,12 +118,10 @@
         team1: "Ole Miss", team2: "UGA", spread1: "+7", spread2: "-7", ouLine: "" },
 
       { id: "fiesta-bowl-2026-01-08", date: "Jan 8, 2026", bowl: "Fiesta Bowl",
-        team1: "Miami (FL)", team2: "Ole Miss", spread1: "-3.5", spread2: "+3.5", ouLine: "" }, 
-        
+        team1: "Miami (FL)", team2: "Ole Miss", spread1: "-3.5", spread2: "+3.5", ouLine: "" },
+
       { id: "peach-bowl-2026-01-09", date: "Jan 9, 2026", bowl: "Peach Bowl",
         team1: "Oregon", team2: "Indiana", spread1: "+4", spread2: "-4", ouLine: "" }
-
-  
     ];
 
     const GAME_META = Object.fromEntries(GAMES.map(g => [g.id, g]));
@@ -139,10 +137,10 @@
     const UNLOCK_AT_ET = new Date("2025-12-31T19:00:00-05:00").getTime();
     const UNLOCKED = () => Date.now() >= UNLOCK_AT_ET;
 
-        // ✅ Hide the “last 2” games until a DIFFERENT time (example: Dec 31, 2025 7:30 PM ET)
+    // ✅ Hide the “last 2” games until a DIFFERENT time (Jan 8, 2026 7:30 PM ET)
     const FINAL2_REVEAL_AT_ET = new Date("2026-01-08T19:30:00-05:00").getTime();
 
-    // Put the IDs of the games you want hidden until FINAL4_REVEAL_AT_ET
+    // Put the IDs of the games you want hidden until FINAL2_REVEAL_AT_ET
     const FINAL2_GAME_IDS = new Set([
       "fiesta-bowl-2026-01-08",
       "peach-bowl-2026-01-09",
@@ -189,39 +187,88 @@
       elLb.innerHTML = `<div class="muted" style="text-align:left;">${escapeHtml(msg)}</div>`;
     }
 
+    // --- Option A: Build leaderboard client-side from grid data (VISIBLE games only) ---
+    function buildLeaderboardRows_(gameIds, users, userOUPicks, totals) {
+      const rows = (users || []).map(name => {
+        const picksObj = (userOUPicks && userOUPicks[name]) ? userOUPicks[name] : {};
+        let totalError = 0;
+        let counted = 0;
+
+        for (const gid of gameIds) {
+          if (!Object.prototype.hasOwnProperty.call(totals, gid)) continue;
+
+          const actual = Number(totals[gid]);
+          const pick = Number(picksObj ? picksObj[gid] : undefined);
+
+          if (!Number.isFinite(actual) || !Number.isFinite(pick)) continue;
+
+          totalError += Math.abs(pick - actual);
+          counted += 1;
+        }
+
+        return { name, totalError: counted ? totalError : null };
+      });
+
+      // Sort: scored first (lowest wins), then blanks, then name
+      rows.sort((a, b) => {
+        const aHas = a.totalError !== null;
+        const bHas = b.totalError !== null;
+        if (aHas && bHas) return a.totalError - b.totalError;
+        if (aHas && !bHas) return -1;
+        if (!aHas && bHas) return 1;
+        return a.name.localeCompare(b.name);
+      });
+
+      return rows;
+    }
+
     async function loadUnlocked_() {
       // show grid area
       elGridStatus.textContent = "";
       elGridWrap.style.display = "";
 
-      const [gridRes, lbRes] = await Promise.all([
-        fetch(SCRIPT_URL + "?action=ou_grid", { method: "GET" }),
-        fetch(SCRIPT_URL + "?action=ou_leaderboard", { method: "GET" })
-      ]);
-
+      // Only fetch the grid endpoint (single source of truth)
+      const gridRes = await fetch(SCRIPT_URL + "?action=ou_grid", { method: "GET" });
       const gridData = await gridRes.json();
-      const lbData = await lbRes.json();
 
       if (!gridData.ok) throw new Error(gridData.error || "Failed to load Total Points grid");
-      if (!lbData.ok) throw new Error(lbData.error || "Failed to load Total Points leaderboard");
 
-      const gameIds = GAMES.map(g => g.id);
+      // Visible games only (hides final 2 until reveal time)
+      const allGameIds = GAMES.map(g => g.id);
+      const visibleGameIds = allGameIds.filter(isGameRevealed);
+
       const totals = gridData.totals || {};
-      const hasResults = Object.keys(totals).some(k => gameIds.includes(k));
+      const hasResults = Object.keys(totals).some(k => visibleGameIds.includes(k));
 
       elStatus.textContent = hasResults
-        ? "Results detected — leaderboard uses total absolute error."
+        ? "Results detected — leaderboard uses total absolute error (visible games only)."
         : "No results entered yet — add actual totals in the OU_Results tab to populate leaderboard.";
 
-      renderLeaderboard(lbData.rows || []);
-      renderGrid(gameIds, gridData.users || [], gridData.userOUPicks || {}, totals);
+      // Build leaderboard client-side (visible games only)
+      const lbRows = buildLeaderboardRows_(
+        visibleGameIds,
+        gridData.users || [],
+        gridData.userOUPicks || {},
+        totals
+      );
+
+      renderLeaderboard(lbRows);
+      renderGrid(visibleGameIds, gridData.users || [], gridData.userOUPicks || {}, totals);
     }
 
     function renderLeaderboard(rows) {
       if (!rows.length) {
-        elLb.innerHTML = `<div class="muted" style="text-align:left;">No leaderboard yet (results not entered).</div>`;
+        elLb.innerHTML = `<div class="muted" style="text-align:left;">No submissions yet.</div>`;
         return;
       }
+
+      const anyScores = rows.some(r => r.totalError !== null);
+      if (!anyScores) {
+        elLb.innerHTML = `<div class="muted" style="text-align:left;">No leaderboard yet (no actual totals entered for visible games).</div>`;
+        return;
+      }
+
+      const scored = rows.filter(r => r.totalError !== null);
 
       elLb.innerHTML = `
         <table>
@@ -233,7 +280,7 @@
             </tr>
           </thead>
           <tbody>
-            ${rows.map((r, i) => `
+            ${scored.map((r, i) => `
               <tr>
                 <td>${i + 1}</td>
                 <td><strong>${escapeHtml(r.name)}</strong></td>

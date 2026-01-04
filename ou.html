@@ -116,6 +116,14 @@
 
       { id: "sugar-bowl-2026-01-01", date: "Jan 1, 2026", bowl: "Sugar Bowl",
         team1: "Ole Miss", team2: "UGA", spread1: "+7", spread2: "-7", ouLine: "" },
+
+      { id: "fiesta-bowl-2026-01-08", date: "Jan 8, 2026", bowl: "Fiesta Bowl",
+        team1: "Miami (FL)", team2: "Ole Miss", spread1: "-3.5", spread2: "+3.5", ouLine: "" }, 
+        
+      { id: "peach-bowl-2026-01-09", date: "Jan 9, 2026", bowl: "Peach Bowl",
+        team1: "Oregon", team2: "Indiana", spread1: "+4", spread2: "-4", ouLine: "" }
+
+  
     ];
 
     const GAME_META = Object.fromEntries(GAMES.map(g => [g.id, g]));
@@ -128,7 +136,7 @@
     const elGridStatus = document.getElementById("ouGridStatus");
 
     // ✅ LOCK UNTIL: Dec 31, 2025 7:00 PM ET
-    const UNLOCK_AT_ET = new Date("2025-12-31T19:00:00-05:00").getTime();
+    const UNLOCK_AT_ET = new Date("2026-01-08T19:00:00-05:00").getTime();
     const UNLOCKED = () => Date.now() >= UNLOCK_AT_ET;
 
     function escapeHtml(s) {

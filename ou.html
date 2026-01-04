@@ -136,8 +136,22 @@
     const elGridStatus = document.getElementById("ouGridStatus");
 
     // ✅ LOCK UNTIL: Dec 31, 2025 7:00 PM ET
-    const UNLOCK_AT_ET = new Date("2026-01-08T19:00:00-05:00").getTime();
+    const UNLOCK_AT_ET = new Date("2025-12-31T19:00:00-05:00").getTime();
     const UNLOCKED = () => Date.now() >= UNLOCK_AT_ET;
+
+    //     // ✅ Hide the “last 2” games until a DIFFERENT time (example: Dec 31, 2025 7:30 PM ET)
+    // const FINAL2_REVEAL_AT_ET = new Date("2026-01-08T19:30:00-05:00").getTime();
+
+    // // Put the IDs of the games you want hidden until FINAL4_REVEAL_AT_ET
+    // const FINAL2_GAME_IDS = new Set([
+    //   "fiesta-bowl-2026-01-08",
+    //   "peach-bowl-2026-01-09",
+    // ]);
+
+    function isGameRevealed(gid) {
+      if (!FINAL2_GAME_IDS.has(String(gid))) return true;
+      return Date.now() >= FINAL2_REVEAL_AT_ET;
+    }
 
     function escapeHtml(s) {
       return String(s ?? "").replace(/[&<>"']/g, c => ({

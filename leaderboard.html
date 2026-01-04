@@ -230,14 +230,14 @@
     const FINAL2_REVEAL_AT_ET = new Date("2026-01-08T19:30:00-05:00").getTime();
 
     // Put the IDs of the games you want hidden until FINAL4_REVEAL_AT_ET
-    const FINAL4_GAME_IDS = new Set([
+    const FINAL2_GAME_IDS = new Set([
       "fiesta-bowl-2026-01-08",
       "peach-bowl-2026-01-09",
     ]);
 
     function isGameRevealed(gid) {
-      if (!FINAL4_GAME_IDS.has(String(gid))) return true;
-      return Date.now() >= FINAL4_REVEAL_AT_ET;
+      if (!FINAL2_GAME_IDS.has(String(gid))) return true;
+      return Date.now() >= FINAL2_REVEAL_AT_ET;
     }
 
     const GAMES = [

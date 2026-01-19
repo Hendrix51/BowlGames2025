@@ -227,17 +227,16 @@
     const PICKS_GRID_UNLOCKED = () => Date.now() >= UNLOCK_AT_ET;
 
     // ✅ Hide the “last 4” games until a DIFFERENT time (example: Dec 31, 2025 7:30 PM ET)
-    const FINAL2_REVEAL_AT_ET = new Date("2026-01-08T19:30:00-05:00").getTime();
+    const FINAL_REVEAL_AT_ET = new Date("2026-01-19T19:30:00-05:00").getTime();
 
     // Put the IDs of the games you want hidden until FINAL4_REVEAL_AT_ET
-    const FINAL2_GAME_IDS = new Set([
-      "fiesta-bowl-2026-01-08",
-      "peach-bowl-2026-01-09",
+    const FINAL_GAME_IDS = new Set([
+      "cfb-natty-2026-01-19"
     ]);
 
     function isGameRevealed(gid) {
-      if (!FINAL2_GAME_IDS.has(String(gid))) return true;
-      return Date.now() >= FINAL2_REVEAL_AT_ET;
+      if (!FINAL_GAME_IDS.has(String(gid))) return true;
+      return Date.now() >= FINAL_REVEAL_AT_ET;
     }
 
     const GAMES = [
@@ -371,7 +370,10 @@
         team1: "Miami (FL)", team2: "Ole Miss", spread1: "-3.5", spread2: "+3.5" },
 
       { id: "peach-bowl-2026-01-09", date: "Jan 9, 2026", bowl: "Peach Bowl",
-        team1: "Oregon", team2: "Indiana", spread1: "+4", spread2: "-4" }  
+        team1: "Oregon", team2: "Indiana", spread1: "+4", spread2: "-4" },
+
+      { id: "cfp-natty-2026-01-19", date: "Jan 19, 2026", bowl: "CFB National Championship",
+        team1: "Miami (FL)", team2: "Indiana", spread1: "+8.5", spread2: "-8.5" }   
     ];
 
     const GAME_MAP = Object.fromEntries(
